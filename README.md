@@ -3,7 +3,7 @@
 A separate full-stack project for city/municipal authorities to monitor heat hotspots, compare city zones, view area-based warnings, and manage cooling centers.
 
 ## Technology
-- React + Vite frontend
+- React frontend
 - Java 17 + Spring Boot 3.4.5 backend
 - Spring Web + Spring Data MongoDB
 - MongoDB database: `urbanheat`
