@@ -4,3 +4,31 @@
 @media(max-width:1150px){.main-content{padding:25px 20px}.sidebar{width:220px}.main-content{margin-left:220px}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content-grid{grid-template-columns:minmax(0,1.2fr) minmax(260px,1fr)}.center-directory{grid-template-columns:1fr}.map-canvas{height:300px}}
 @media(max-width:850px){.sidebar{position:static;width:auto;min-height:auto;padding:14px;display:block}.brand{padding-bottom:13px}.city-select,.nav-label,.sidebar-bottom{display:none}.sidebar nav{display:flex}.nav-item{width:auto;display:inline-flex;padding:9px;font-size:10px}.nav-icon{display:none}.main-content{margin:0;padding:20px 14px}.content-grid,.lower-grid{grid-template-columns:1fr}.topbar{align-items:flex-start}.topbar h1{font-size:22px}.top-actions{flex-direction:column;align-items:flex-end}.updated-chip{display:none}.zone-card-grid,.center-directory{grid-template-columns:1fr}.center-form{grid-template-columns:1fr 1fr}.map-canvas{height:310px}}
 @media(max-width:480px){.stats-grid{grid-template-columns:1fr 1fr;gap:8px}.stat-card{padding:12px}.stat-value{font-size:23px}.topbar p{max-width:250px;line-height:1.5}.top-actions .refresh-button span{display:none}.map-canvas{height:280px}.zone-block{min-width:73px;padding:6px}.zone-block span{font-size:7px}.zone-block strong{font-size:13px}.zone-block small{font-size:7px}.center-form{grid-template-columns:1fr}.footer{flex-direction:column}.panel{padding:13px}}
+
+.management-form{margin:0 0 18px;padding:17px;background:#f8faf8;border:1px solid #e3ece5;border-radius:9px}
+.management-form h3{font:700 13px Manrope,sans-serif;color:#244438;margin:0 0 13px}
+.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.form-grid label{display:flex;flex-direction:column;gap:6px;font-size:9px;color:#64796d}
+.form-grid input,.form-grid select,.form-grid textarea{width:100%;min-width:0;border:1px solid #dce6de;border-radius:6px;padding:9px;background:#fff;color:#263f33;font:10px 'DM Sans',sans-serif}
+.form-grid textarea{min-height:62px;resize:vertical}
+.wide-field{grid-column:1/-1}
+.form-actions,.row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.form-actions{margin-top:13px}
+.row-actions{margin-top:13px}
+.row-actions .text-button{margin-left:auto}
+.secondary-button,.danger-button{border:1px solid #d8e3da;background:#fff;color:#426253;border-radius:6px;padding:7px 10px;font-size:9px;font-weight:600}
+.secondary-button:hover{background:#edf4ee}
+.danger-button{border-color:#f0d4ce;color:#a74331;background:#fff8f6}
+.danger-button:hover{background:#fdebe7}
+.success-banner{padding:11px 13px;margin-bottom:13px;border:1px solid #cfe6d2;background:#f0faf1;color:#326b3d;border-radius:8px;font-size:11px}
+.error-banner{white-space:pre-wrap;overflow-wrap:anywhere}
+.zone-card{display:block}
+@media(max-width:850px){.form-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.form-grid{grid-template-columns:1fr}.wide-field{grid-column:auto}.row-actions .text-button{margin-left:0}}
+
+
+/* Authentication and role workspace */
+.login-shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#edf5ef,#f7f8f4)}
+.login-card{width:min(100%,430px);padding:34px;background:#fff;border:1px solid #e0e9e2;border-radius:18px;box-shadow:0 18px 55px rgba(32,66,47,.10);display:flex;flex-direction:column;gap:15px}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:10px}.login-brand>div:last-child{display:flex;flex-direction:column}.login-brand strong{font-size:19px;color:#244735}.login-brand span{font-size:11px;color:#748579}
+.login-card h1{font-size:27px;margin:0;color:#243c30}.login-subtitle{margin:-7px 0 5px;color:#728176;font-size:13px}.login-card label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#40584a}.login-card input{border:1px solid #dce6de;border-radius:8px;padding:12px;font:13px 'DM Sans',sans-serif;outline:none}.login-card input:focus{border-color:#5d9470;box-shadow:0 0 0 3px rgba(93,148,112,.12)}.login-submit{width:100%;padding:12px;margin-top:2px}.demo-credentials{display:flex;flex-direction:column;gap:5px;padding:12px;background:#f5f8f5;border-radius:9px;color:#66796c;font-size:10px}.demo-credentials strong{color:#365441;font-size:11px;margin-bottom:2px}.logout-button{width:100%;margin-top:10px;padding:8px;border:1px solid rgba(255,255,255,.22);border-radius:7px;background:transparent;color:#e6eee8;font-size:10px;cursor:pointer}.logout-button:hover{background:rgba(255,255,255,.1)}.center-form h3{grid-column:1/-1;margin:0;color:#365441;font-size:13px}

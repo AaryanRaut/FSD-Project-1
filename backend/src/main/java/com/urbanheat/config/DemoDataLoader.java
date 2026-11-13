@@ -2,6 +2,7 @@ package com.urbanheat.config;
 
 import com.urbanheat.model.*;
 import com.urbanheat.repository.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,8 +15,14 @@ import java.util.List;
 public class DemoDataLoader {
     @Bean
     CommandLineRunner seedDemoData(CityZoneRepository zones, HeatHotspotRepository hotspots,
-                                   CoolingCenterRepository centers, WeatherRecordRepository weather) {
+                                   CoolingCenterRepository centers, WeatherRecordRepository weather,
+                                   AppUserRepository users, PasswordEncoder passwordEncoder) {
         return args -> {
+            // Demo accounts are created once; passwords are stored as BCrypt hashes.
+            if (!users.existsByUsername("admin")) users.save(new AppUser("admin", passwordEncoder.encode("admin123"), "City Administrator", "ADMINISTRATOR"));
+            if (!users.existsByUsername("authority")) users.save(new AppUser("authority", passwordEncoder.encode("authority123"), "Municipal Authority", "AUTHORITY"));
+            if (!users.existsByUsername("resident")) users.save(new AppUser("resident", passwordEncoder.encode("resident123"), "Public Resident", "RESIDENT"));
+
             if (zones.count() == 0) {
                 zones.saveAll(List.of(
                     new CityZone("Central District", "Central", 41.5, 48, "Critical", 185000, "Dense construction and limited tree cover"),
