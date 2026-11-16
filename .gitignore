@@ -5,3 +5,5 @@ target/
 .idea/
 .vscode/
 *.log
+.env.*
+!.env.example

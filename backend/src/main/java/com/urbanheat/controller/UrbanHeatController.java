@@ -5,6 +5,7 @@ import com.urbanheat.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,10 +34,13 @@ public class UrbanHeatController {
     }
 
     @GetMapping("/dashboard")
-    public Map<String, Object> dashboard() {
+    public Map<String, Object> dashboard(Authentication authentication) {
         List<CityZone> zoneList = zones.findAll();
         List<HeatHotspot> hotspotList = hotspots.findAll();
         List<CoolingCenter> centerList = centers.findAll();
+        if (authentication != null && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_RESIDENT"))) {
+            centerList = centerList.stream().filter(c -> "Open".equalsIgnoreCase(c.getStatus())).toList();
+        }
         long highRisk = zoneList.stream()
                 .filter(z -> "High".equalsIgnoreCase(z.getRiskLevel())
                         || "Critical".equalsIgnoreCase(z.getRiskLevel()))
@@ -188,13 +192,23 @@ public class UrbanHeatController {
 
     // Existing Cooling Center and Weather functionality
     @GetMapping("/cooling-centers")
-    public List<CoolingCenter> getCoolingCenters() {
-        return centers.findAll();
+    public List<CoolingCenter> getCoolingCenters(Authentication authentication) {
+        List<CoolingCenter> all = centers.findAll();
+        if (authentication != null && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_RESIDENT"))) {
+            return all.stream().filter(c -> "Open".equalsIgnoreCase(c.getStatus())).toList();
+        }
+        return all;
     }
 
     @GetMapping("/cooling-centers/{id}")
-    public CoolingCenter getCoolingCenter(@PathVariable String id) {
-        return centers.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cooling center not found"));
+    public CoolingCenter getCoolingCenter(@PathVariable String id, Authentication authentication) {
+        CoolingCenter center = centers.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cooling center not found"));
+        boolean resident = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RESIDENT"));
+        if (resident && !"Open".equalsIgnoreCase(center.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cooling center not found");
+        }
+        return center;
     }
 
     @PostMapping("/cooling-centers")

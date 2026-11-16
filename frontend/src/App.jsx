@@ -41,6 +41,10 @@ export default function App() {
   const [showHotspotForm, setShowHotspotForm] = useState(false);
   const [editingHotspot, setEditingHotspot] = useState(null);
   const [hotspotForm, setHotspotForm] = useState(emptyHotspot);
+  const [riskForm, setRiskForm] = useState({ zone: '', temperature: '38', humidity: '60', windSpeed: '8' });
+  const [riskResult, setRiskResult] = useState(null);
+  const [riskHistory, setRiskHistory] = useState([]);
+  const [riskBusy, setRiskBusy] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -50,8 +54,11 @@ export default function App() {
       if (dashRes.status === 401 || dashRes.status === 403) throw new Error('Your session is not valid for this request. Please sign in again.');
       if (!dashRes.ok) throw new Error('Dashboard request failed');
       const dash = await dashRes.json(); setDashboard(dash);
+      const historyRes = await apiFetch(`${API}/heat-risk/history`);
+      if (historyRes.ok) setRiskHistory(await historyRes.json());
       if (role !== 'RESIDENT') { const weatherRes = await apiFetch(`${API}/weather`); if (weatherRes.ok) setWeather(await weatherRes.json()); }
       setSelectedZone(current => dash.zones?.some(z => z.name === current) ? current : (dash.zones?.[0]?.name || ''));
+      setRiskForm(current => ({ ...current, zone: dash.zones?.some(z => z.name === current.zone) ? current.zone : (dash.zones?.[0]?.name || '') }));
     } catch (e) {
       setError('Could not connect to UrbanHeat backend. Start Spring Boot in the backend folder with: mvn spring-boot:run');
     } finally {
@@ -198,6 +205,22 @@ export default function App() {
   async function saveCenter(e) { e.preventDefault(); setError(''); setSuccess(''); const payload = { ...form, capacity: Number(form.capacity), peoplePresent: Number(form.peoplePresent), status: Number(form.peoplePresent) >= Number(form.capacity) ? 'Full' : 'Open' }; try { const response = await apiFetch(editingCenter ? `${API}/cooling-centers/${editingCenter.id}` : `${API}/cooling-centers`, { method: editingCenter ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(await response.text() || 'Could not save cooling center'); setForm({ name: '', zone: '', address: '', capacity: '60', peoplePresent: '0', waterAvailable: true }); setShowForm(false); setEditingCenter(null); await loadData(); setTab('Cooling Centers'); setSuccess(editingCenter ? 'Cooling center updated successfully.' : 'Cooling center added successfully.'); } catch (e) { setError(e.message || 'Could not save the cooling center.'); } }
   async function deleteCenter(center) { if (!window.confirm(`Delete cooling center "${center.name}"?`)) return; try { const response = await apiFetch(`${API}/cooling-centers/${center.id}`, { method: 'DELETE' }); if (!response.ok) throw new Error(await response.text()); await loadData(); setSuccess('Cooling center deleted successfully.'); } catch (e) { setError(e.message || 'Could not delete cooling center.'); } }
 
+  async function classifyHeatRisk(e) {
+    e.preventDefault();
+    setError(''); setSuccess(''); setRiskBusy(true); setRiskResult(null);
+    const payload = { zone: riskForm.zone, temperature: Number(riskForm.temperature), humidity: Number(riskForm.humidity), windSpeed: Number(riskForm.windSpeed) };
+    try {
+      const response = await apiFetch(`${API}/heat-risk/classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || body.detail || 'Could not classify heat risk. Please check the input values.');
+      setRiskResult(body);
+      const historyResponse = await apiFetch(`${API}/heat-risk/history`);
+      if (historyResponse.ok) setRiskHistory(await historyResponse.json());
+      setSuccess('Heat risk classified and saved to MongoDB history.');
+    } catch (err) { setError(err.message || 'Heat risk classification failed.'); }
+    finally { setRiskBusy(false); }
+  }
+
   if (!auth?.token) return <LoginScreen onLogin={handleLogin} />;
   if (loading) return <div className="loading-screen"><div className="brand-mark">UH</div><h2>UrbanHeat</h2><p>Connecting to city operations data…</p></div>;
 
@@ -206,7 +229,7 @@ export default function App() {
       <div className="brand"><div className="brand-mark">UH</div><div><strong>UrbanHeat</strong><span>City operations</span></div></div>
       <div className="city-select"><span className="city-dot"></span><div><small>MONITORING CITY</small><strong>Metro District</strong></div><span className="chevron">⌄</span></div>
       <div className="nav-label">WORKSPACE</div>
-      {(isResident ? [['Overview', '▦'], ['Heat Hotspots', '◉'], ['Cooling Centers', '⌂']] : [['Overview', '▦'], ['Heat Hotspots', '◉'], ['City Zones', '⌘'], ['Cooling Centers', '⌂'], ...(!isResident ? [['Weather Records', '☼']] : [])]).map(([name, icon]) => <button key={name} className={`nav-item ${tab === name ? 'active' : ''}`} onClick={() => setTab(name)}><span className="nav-icon">{icon}</span>{name}{name === 'Heat Hotspots' && <span className="nav-count">{hotspots.length}</span>}</button>)}
+      {(isResident ? [['Overview', '▦'], ['Heat Hotspots', '◉'], ['Cooling Centers', '⌂'], ['Heat Risk Analysis', '⚑']] : [['Overview', '▦'], ['Heat Hotspots', '◉'], ['City Zones', '⌘'], ['Cooling Centers', '⌂'], ['Heat Risk Analysis', '⚑'], ...(!isResident ? [['Weather Records', '☼']] : [])]).map(([name, icon]) => <button key={name} className={`nav-item ${tab === name ? 'active' : ''}`} onClick={() => setTab(name)}><span className="nav-icon">{icon}</span>{name}{name === 'Heat Hotspots' && <span className="nav-count">{hotspots.length}</span>}</button>)}
       <div className="sidebar-bottom"><div className="live-indicator"><span></span> Signed in · {role}</div><p>UrbanHeat municipal monitoring prototype</p><div className="admin-chip"><div className="avatar">{(user?.displayName || 'U').split(' ').map(x => x[0]).join('').slice(0,2)}</div><div><strong>{user?.displayName}</strong><small>{role.replace('_', ' ')}</small></div></div><button className="logout-button" onClick={logout}>Sign out</button></div>
     </aside>
 
@@ -301,6 +324,23 @@ export default function App() {
       {dashboard && tab === 'Cooling Centers' && <section className="panel page-panel"><div className="panel-heading"><div><span className="eyebrow">COOLING INFRASTRUCTURE</span><h2>Cooling center directory</h2><p>Track public cooling facilities, capacity, and basic amenities.</p></div>{isAdmin && <button className="primary-button" onClick={showForm ? () => {setShowForm(false);setEditingCenter(null);} : startAddCenter}>{showForm ? 'Cancel' : '+ Add center'}</button>}</div>
         {isAdmin && showForm && <form className="center-form" onSubmit={saveCenter}><h3>{editingCenter ? 'Edit cooling center' : 'Add cooling center'}</h3><label>Center name<input required value={form.name} onChange={e => setForm({...form, name:e.target.value})} placeholder="e.g. East Ward Library"/></label><label>Zone<input required value={form.zone} onChange={e => setForm({...form, zone:e.target.value})} placeholder="e.g. Riverside"/></label><label>Address<input required value={form.address} onChange={e => setForm({...form, address:e.target.value})} placeholder="Street / landmark"/></label><label>Capacity<input required type="number" min="1" value={form.capacity} onChange={e => setForm({...form, capacity:e.target.value})}/></label><label>People present<input required type="number" min="0" max={form.capacity} value={form.peoplePresent} onChange={e => setForm({...form, peoplePresent:e.target.value})}/></label><label className="checkbox-label"><input type="checkbox" checked={form.waterAvailable} onChange={e => setForm({...form, waterAvailable:e.target.checked})}/> Drinking water available</label><div className="form-actions"><button className="primary-button" type="submit">{editingCenter ? 'Update center' : 'Save center to database'}</button><button className="secondary-button" type="button" onClick={() => {setShowForm(false);setEditingCenter(null);}}>Cancel</button></div></form>}
         <div className="center-directory">{centers.filter(c => !isResident || (c.status || '').toLowerCase() === 'open').map(c => <div className="center-card" key={c.id || c.name}><div className="center-icon">⌂</div><div className="center-info"><div className="center-title-row"><h3>{c.name}</h3><span className={`status-pill ${(c.status || '').toLowerCase()}`}>{c.status}</span></div><p>{c.address} · {c.zone}</p><div className="center-details"><span>Capacity <strong>{c.capacity}</strong></span><span>Present <strong>{c.peoplePresent}</strong></span><span>{c.waterAvailable ? '✓ Water available' : '○ No water listed'}</span></div><div className="capacity-track"><div className={`capacity-fill ${c.peoplePresent / Math.max(c.capacity, 1) >= .9 ? 'near-full' : ''}`} style={{width:`${Math.min(100,Math.round(c.peoplePresent/Math.max(c.capacity,1)*100))}%`}}></div></div>{isAdmin && <div className="row-actions"><button className="secondary-button" onClick={() => startEditCenter(c)}>Edit</button><button className="danger-button" onClick={() => deleteCenter(c)}>Delete</button></div>}</div></div>)}{isResident && centers.every(c => (c.status || '').toLowerCase() !== 'open') && <p className="muted">No cooling centers are currently listed as open.</p>}</div>
+      </section>}
+
+
+      {dashboard && tab === 'Heat Risk Analysis' && <section className="panel page-panel">
+        <div className="panel-heading"><div><span className="eyebrow">INTELLIGENT FEATURE</span><h2>Heat risk classification</h2><p>Enter zone weather conditions to receive a risk level and practical safety guidance.</p></div><span className="map-badge">Rule-based demo</span></div>
+        <div className="risk-disclaimer">This educational rule-based assessment is for project demonstration only. It is not an official heat index, medical assessment or emergency warning.</div>
+        <form className="management-form" onSubmit={classifyHeatRisk}>
+          <h3>Weather input</h3><div className="form-grid">
+            <label>City zone<select required value={riskForm.zone} onChange={e => setRiskForm({...riskForm, zone:e.target.value})}><option value="">Select a zone</option>{zones.map(z => <option key={z.id || z.name} value={z.name}>{z.name}</option>)}</select></label>
+            <label>Temperature (°C)<input required type="number" step="0.1" min="-20" max="70" value={riskForm.temperature} onChange={e => setRiskForm({...riskForm, temperature:e.target.value})}/></label>
+            <label>Humidity (%)<input required type="number" min="0" max="100" value={riskForm.humidity} onChange={e => setRiskForm({...riskForm, humidity:e.target.value})}/></label>
+            <label>Wind speed (km/h)<input required type="number" step="0.1" min="0" max="200" value={riskForm.windSpeed} onChange={e => setRiskForm({...riskForm, windSpeed:e.target.value})}/></label>
+          </div><div className="form-actions"><button className="primary-button" type="submit" disabled={riskBusy || !riskForm.zone}>{riskBusy ? 'Analysing…' : 'Classify heat risk'}</button></div>
+        </form>
+        {riskResult && <div className="risk-result"><div className="risk-result-head"><div><span className="eyebrow">CLASSIFICATION RESULT</span><h3>{riskResult.zone}</h3><p>{riskResult.temperature}°C · {riskResult.humidity}% humidity · {riskResult.windSpeed} km/h wind</p></div><span className={`risk-pill ${riskClass(riskResult.riskLevel)}`}>{riskResult.riskLevel} risk</span></div><p className="risk-explanation">{riskResult.explanation}</p><h4>Safety recommendations</h4><ul>{(riskResult.recommendations || []).map((item, index) => <li key={index}>{item}</li>)}</ul><small>Saved at {riskResult.classifiedAt ? new Date(riskResult.classifiedAt).toLocaleString() : 'just now'}</small></div>}
+        <div className="history-heading"><div><h3>Recent classification history</h3><p>Latest saved assessments from MongoDB (up to 50 records).</p></div></div>
+        {riskHistory.length ? <div className="table-wrap"><table><thead><tr><th>Zone</th><th>Temperature</th><th>Humidity</th><th>Wind</th><th>Risk</th><th>Classified at</th></tr></thead><tbody>{riskHistory.map(item => <tr key={item.id}><td><strong>{item.zone}</strong></td><td>{item.temperature}°C</td><td>{item.humidity}%</td><td>{item.windSpeed} km/h</td><td><span className={`risk-pill ${riskClass(item.riskLevel)}`}>{item.riskLevel}</span></td><td>{item.classifiedAt ? new Date(item.classifiedAt).toLocaleString() : '—'}</td></tr>)}</tbody></table></div> : <div className="empty-state"><h2>No classifications yet</h2><p>Submit weather details above to create the first saved classification.</p></div>}
       </section>}
 
       {dashboard && tab === 'Weather Records' && <section className="panel page-panel"><div className="panel-heading"><div><span className="eyebrow">WEATHER OBSERVATIONS</span><h2>Zone weather records</h2><p>Stored demonstration weather observations.</p></div></div><div className="table-wrap"><table><thead><tr><th>Zone</th><th>Temperature</th><th>Humidity</th><th>Recorded at</th><th>Source</th></tr></thead><tbody>{weather.map(w => <tr key={w.id || w.zone}><td><strong>{w.zone}</strong></td><td>{w.temperature}°C</td><td>{w.humidity}%</td><td>{w.recordedAt}</td><td>{w.source}</td></tr>)}</tbody></table></div></section>}
